@@ -1,0 +1,34 @@
+{
+    "usuarios": [
+        {
+            "user_id": 5912225684,
+            "username": "Yadixa09",
+            "plan": "premium",
+            "publicaciones": [],
+            "mensajes_programados": [],
+            "rol": "admin",
+            "solicitud": "aceptada",
+            "notificado": true,
+            "pago": true,
+            "dias_plan": 30,
+            "password": "k3LQOCNO",
+            "fecha_inicio": "2025-03-27",
+            "fecha_fin": "2025-04-26"
+        },
+        {
+            "user_id": 1616365156,
+            "username": "Near",
+            "plan": "premium",
+            "publicaciones": [],
+            "mensajes_programados": [],
+            "rol": "admin",
+            "solicitud": "aceptada",
+            "notificado": true,
+            "pago": true,
+            "dias_plan": 30,
+            "password": "Xm0iiMeN",
+            "fecha_inicio": "2025-03-27",
+            "fecha_fin": "2025-04-26"
+        }
+    ]
+}

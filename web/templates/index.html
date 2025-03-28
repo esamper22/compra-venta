@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - Mi Proyecto{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<!-- Features Section -->
+<section class="features-section">
+  <div class="container">
+    <h2 class="section-title text-center">Características Principales</h2>
+    <p class="section-subtitle text-center">Descubre por qué nuestra plataforma es la elección ideal para gestionar tu negocio</p>
+    
+    <div class="row g-4">
+      <div class="col-md-4 animate__animated animate__fadeInUp">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-lock"></i>
+          </div>
+          <h3 class="feature-title">Acceso Exclusivo</h3>
+          <p class="feature-description">Solo usuarios con pago confirmado pueden acceder al panel administrativo, garantizando la exclusividad de nuestro servicio.</p>
+        </div>
+      </div>
+      
+      <div class="col-md-4 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-tasks"></i>
+          </div>
+          <h3 class="feature-title">Gestión Simplificada</h3>
+          <p class="feature-description">Maneja tus productos y publicaciones de forma intuitiva con nuestra interfaz diseñada para maximizar tu productividad.</p>
+        </div>
+      </div>
+      
+      <div class="col-md-4 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-headset"></i>
+          </div>
+          <h3 class="feature-title">Soporte Premium</h3>
+          <p class="feature-description">Atención personalizada para impulsar tu negocio con asesores expertos disponibles para resolver tus dudas.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="how-it-works">
+  <div class="container">
+    <h2 class="section-title text-center">Cómo Funciona</h2>
+    <p class="section-subtitle text-center">Comienza a utilizar nuestra plataforma en tres simples pasos</p>
+    
+    <div class="row mt-5 position-relative">
+      <div class="step-connector d-none d-md-block"></div>
+      
+      <div class="col-md-4 animate__animated animate__fadeInUp">
+        <div class="step-card shadow-lg p-4 text-center rounded">
+          <div class="step-number text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem; background-color: #3D2FC1;">
+        1
+          </div>
+          <h4 class="step-title fw-bold">Inicia Sesion</h4>
+            <p class="step-description text-muted">Inicia sesión en tu cuenta Pro o solicita una!.</p>
+        </div>
+      </div>
+      
+      <div class="col-md-4 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+        <div class="step-card shadow-lg p-4 text-center rounded">
+          <div class="step-number text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem; background-color: #3D2FC1;">
+        2
+          </div>
+          <h4 class="step-title fw-bold">Configura</h4>
+          <p class="step-description text-muted">Personaliza tu panel según tus necesidades y preferencias.</p>
+        </div>
+      </div>
+      
+      <div class="col-md-4 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
+        <div class="step-card shadow-lg p-4 text-center rounded">
+          <div class="step-number text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem; background-color: #3D2FC1;">
+        3
+          </div>
+          <h4 class="step-title fw-bold">¡Comienza!</h4>
+          <p class="step-description text-muted">Empieza a gestionar tus productos y publicaciones de inmediato.</p>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+  <div class="container mt-5">
+    <div class="cta-content">
+      <h2 class="cta-title animate__animated animate__fadeInUp">¿Listo para llevar tu negocio al siguiente nivel?</h2>
+      <p class="cta-description animate__animated animate__fadeInUp">Únete a miles de usuarios satisfechos y comienza a disfrutar de todos los beneficios que nuestra plataforma tiene para ofrecer.</p>
+      <a href="{{ url_for('login') }}" class="btn cta-btn animate__animated animate__fadeInUp">
+        <i class="fas fa-rocket me-2"></i> Comenzar Ahora
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}

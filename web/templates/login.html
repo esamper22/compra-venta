@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Mi Proyecto{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center login-container">
+  <div class="col-md-8 col-lg-6 col-xl-5 position-relative">
+    <!-- Decorative elements -->
+    <div class="login-decoration circle-1 animate__animated animate__fadeIn animate__delay-1s"></div>
+    <div class="login-decoration circle-2 animate__animated animate__fadeIn animate__delay-1s"></div>
+    <div class="login-decoration dots animate__animated animate__fadeIn animate__delay-1s"></div>
+    
+    <div class="login-card card animate__animated animate__fadeInUp">
+      <div class="login-header">
+        <div class="login-icon">
+          <i class="fas fa-user"></i>
+        </div>
+        <h3 class="login-title">Bienvenido de nuevo</h3>
+        <p class="login-subtitle">Ingresa tus credenciales para continuar</p>
+      </div>
+      <div class="login-body">
+        <form method="POST" action="{{ url_for('login') }}">
+          <div class="form-floating position-relative">
+            <input type="text" class="form-control" id="username" name="username" placeholder="Tu usuario de Telegram" required>
+            <label for="username">Usuario (ID de Telegram)</label>
+            <div class="form-floating-icon">
+              <i class="fab fa-telegram"></i>
+            </div>
+          </div>
+          <div class="form-floating position-relative">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Ingresa la clave asignada" required>
+            <label for="password">Clave de Acceso</label>
+            <div class="form-floating-icon password-toggle" onclick="togglePassword()">
+              <i class="fas fa-eye" id="toggleIcon"></i>
+            </div>
+          </div>
+          <button type="submit" class="btn login-btn w-100 mt-4">
+            <i class="fas fa-sign-in-alt me-2"></i> Iniciar Sesión
+          </button>
+        </form>
+      </div>
+      <div class="login-footer">
+        <div class="login-divider">
+          <!-- <span>o continúa con</span> -->
+        </div>
+        <!-- <div class="social-login">
+          <a href="#" class="social-btn facebook">
+            <i class="fab fa-facebook-f"></i>
+          </a>
+          <a href="#" class="social-btn google">
+            <i class="fab fa-google"></i>
+          </a>
+          <a href="#" class="social-btn twitter">
+            <i class="fab fa-twitter"></i>
+          </a>
+        </div>  -->
+        <p class="mb-0">¿No tienes una cuenta? <a href="https://t.me/compra_venta_repetidor_bot" target="_blank">Contactanos ahora</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}
