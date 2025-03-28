@@ -132,7 +132,7 @@ def register_handlers_user(bot):
     def acceder_miniapp(message):
         """Proporciona un botón inline para acceder a la MiniApp."""
         markup = types.InlineKeyboardMarkup()
-        btn_access = types.InlineKeyboardButton("🌐 Acceder a la MiniApp", web_app=types.WebAppInfo(url="https://esamper22.github.io/mi-portfolio/"))
+        btn_access = types.InlineKeyboardButton("🌐 Acceder a la MiniApp", web_app=types.WebAppInfo(url="https://esamper.pythonanywhere.com/"))
         markup.add(btn_access)
         bot.send_message(message.chat.id,
             "🌐 <b>Acceso a la MiniApp:</b>\n\n"
