@@ -8,7 +8,15 @@ from dotenv import load_dotenv
 load_dotenv()
 # Ruta del archivo JSON que actuará como "base de datos"
 DB_FILE = os.getenv("DATABASE_NAME", 'db.json')
-SUPER_ADMIN = os.getenv("SUPER_ADMIN ", None)
+SUPER_ADMIN = super_admin = {
+    "user_id": int(os.getenv("SUPER_ADMIN_USER_ID")),
+    "username": os.getenv("SUPER_ADMIN_USERNAME"),
+    "plan": os.getenv("SUPER_ADMIN_PLAN"),
+    "publicaciones": eval(os.getenv("SUPER_ADMIN_PUBLICACIONES")),  # Ten cuidado con eval
+    "mensajes_programados": eval(os.getenv("SUPER_ADMIN_MENSAJES_PROGRAMADOS")),  # Ten cuidado con eval
+    "rol": os.getenv("SUPER_ADMIN_ROL"),
+}
+
 
 def load_database():
     """
