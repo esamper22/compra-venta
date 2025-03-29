@@ -3,9 +3,11 @@ import os
 from datetime import datetime, timedelta
 from bot.utils import generate_password
 from bot.config import SUPER_ADMIN
+from dotenv import load_dotenv
 
+load_dotenv()
 # Ruta del archivo JSON que actuará como "base de datos"
-DB_FILE = 'database.json'
+DB_FILE = os.getenv("DATABASE_NAME", 'db.json')
 
 
 def load_database():
