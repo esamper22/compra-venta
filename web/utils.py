@@ -1,5 +1,3 @@
-import os
-
 def generate_key_value():
     import secrets
     # Generar una clave secreta de 24 bytes en formato hexadecimal

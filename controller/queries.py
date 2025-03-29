@@ -1,14 +1,14 @@
 import json
 import os
 from datetime import datetime, timedelta
-from bot.utils import generate_password
-from bot.config import SUPER_ADMIN
+import random
+import string
 from dotenv import load_dotenv
 
 load_dotenv()
 # Ruta del archivo JSON que actuará como "base de datos"
 DB_FILE = os.getenv("DATABASE_NAME", 'db.json')
-
+SUPER_ADMIN = os.getenv("DATABASE_NAME", None)
 
 def load_database():
     """
@@ -189,3 +189,13 @@ def get_day_expiration(user_chat_id):
         dias_restantes = (fecha_fin - datetime.now()).days
         return dias_restantes if dias_restantes > 0 else 0
     return 0
+
+
+# -------------------------------
+# Funciones auxiliares
+# -------------------------------
+def generate_password(length=8):
+        """Genera una contraseña aleatoria."""
+        characters = string.ascii_letters + string.digits
+        return ''.join(random.choice(characters) for _ in range(length))
+ 
