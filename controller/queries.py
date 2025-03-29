@@ -173,7 +173,7 @@ def get_admins():
 
 
 def check_is_admin():
-    id_superadmin = load_database()["superadmin"].get("user_id")
+    id_superadmin = SUPER_ADMIN.get("user_id")
     data = load_database()
     ids_admin = [u.get("user_id") for u in data["usuarios"] if u.get("rol") == "admin"]
     return [id_superadmin] + ids_admin
