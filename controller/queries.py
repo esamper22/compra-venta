@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # Ruta del archivo JSON que actuará como "base de datos"
 DB_FILE = os.getenv("DATABASE_NAME", 'db.json')
-SUPER_ADMIN = super_admin = {
+SUPER_ADMIN = {
     "user_id": int(os.getenv("SUPER_ADMIN_USER_ID")),
     "username": os.getenv("SUPER_ADMIN_USERNAME"),
     "plan": os.getenv("SUPER_ADMIN_PLAN"),
