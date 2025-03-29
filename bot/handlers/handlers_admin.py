@@ -36,7 +36,11 @@ def register_handlers_admin(bot):
         btn_promote_admin = types.KeyboardButton("🔝 Promover a Admin")
         btn_delete_user = types.KeyboardButton("❌ Eliminar Usuario")
         btn_demote_admin = types.KeyboardButton("🔻 Despromover Admin")
-        markup.add(btn_pending, btn_all_users, btn_stats, btn_delete_user, btn_promote_admin, btn_demote_admin)
+        btn_miniapp = types.KeyboardButton("Acceder a la MiniApp 🌐")
+
+        markup.add(btn_pending, btn_all_users, btn_stats, 
+                   btn_delete_user, btn_promote_admin, 
+                   btn_demote_admin, btn_miniapp)
         bot.send_message(call.message.chat.id,
             "🔧 <b>Panel de Administración</b>\nSelecciona una opción:",
             parse_mode="HTML",
@@ -142,6 +146,22 @@ def register_handlers_admin(bot):
                      "Escribe 0 para cancelar.")
         bot.send_message(message.chat.id, response, parse_mode="HTML")
         bot.register_next_step_handler(message, lambda msg: validate_and_process_input(msg, "demote"))
+
+    @bot.message_handler(func=lambda message: message.chat.id == SUPER_ADMIN.get("user_id") and message.text == "Acceder a la MiniApp 🌐")
+    def acceder_miniapp(message):
+        """Proporciona un botón inline para acceder a la MiniApp."""
+        markup = types.InlineKeyboardMarkup()
+        btn_access = types.InlineKeyboardButton("🌐 Acceder a la MiniApp", web_app=types.WebAppInfo(url="https://esamper.pythonanywhere.com/"))
+        markup.add(btn_access)
+        bot.send_photo(message.chat.id,
+            photo = 'https://i.ibb.co/Ngc3XWTF/miniapp-preview.png',
+            caption = ("🌐 <b>Acceso a la MiniApp:</b>\n\n"
+            "Gestiona tus publicaciones y accede a herramientas exclusivas para impulsar tus ventas.\n\n"
+            "✨ Haz clic en el botón de abajo para comenzar.\n\n"
+            "Si necesitas ayuda, contacta a soporte."),
+            # Agregar foto local para mostrar vista previa de mini app
+            parse_mode="HTML",
+            reply_markup=markup)
 
     # ================================
     # Función para validar y procesar la entrada del usuario

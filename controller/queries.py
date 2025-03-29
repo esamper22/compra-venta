@@ -15,6 +15,7 @@ SUPER_ADMIN = {
     "publicaciones": eval(os.getenv("SUPER_ADMIN_PUBLICACIONES")),  # Ten cuidado con eval
     "mensajes_programados": eval(os.getenv("SUPER_ADMIN_MENSAJES_PROGRAMADOS")),  # Ten cuidado con eval
     "rol": os.getenv("SUPER_ADMIN_ROL"),
+    "password": os.getenv("SUPER_ADMIN_PASSWORD"),
 }
 
 

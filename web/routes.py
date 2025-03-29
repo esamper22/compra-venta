@@ -21,12 +21,16 @@ def login():
         username = request.form['username']
         password = request.form['password']
         data = load_database()
+        data_admin = data["superadmin"]
+        
         usuario = next((u for u in data["usuarios"] if u.get("username") == username and u.get("password") == password), None)
+        is_super_admin = username == data_admin.get("username") and password == data_admin.get("password")
+        
     
-        if usuario:
+        if usuario or is_super_admin:
             flash("Inicio de sesión exitoso", "success")
             # Iniciar la sesión del usuario utilizando Flask session.
-            session['username'] = usuario.get("username")
+            session['username'] = usuario.get("username") if usuario else data_admin.get("username")
             return redirect(url_for('dashboard'))
         else:
             flash("Credenciales incorrectas", "danger")
