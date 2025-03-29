@@ -1,10 +1,9 @@
 # web/routes.py
 from flask import render_template, request, redirect, url_for, flash
 
-from bot.database import load_database
+from controller.queries import load_database
 from . import app
 from flask import session
-
 
 @app.route('/')
 def index():
@@ -27,7 +26,6 @@ def login():
         if usuario:
             flash("Inicio de sesión exitoso", "success")
             # Iniciar la sesión del usuario utilizando Flask session.
-            session['user_id'] = usuario.get("user_id")
             session['username'] = usuario.get("username")
             return redirect(url_for('dashboard'))
         else:
@@ -50,4 +48,3 @@ def dashboard():
         flash("Debes iniciar sesión para acceder al dashboard.", "danger")
         return redirect(url_for('login'))
     return render_template('dashboard.html')
-

@@ -1,262 +1,214 @@
 from telebot import types
-from bot.config import ADMIN_ID
-from bot.database import (
+from bot.config import SUPER_ADMIN
+from bot.utils import parse_id_list, parse_solicitude_list
+from controller.queries import (
+    get_admins,
     load_database,
     save_database,
     update_user,
-    upgrade_user_to_premium
+    get_user_id,
+    upgrade_user_to_premium,
+    check_is_admin
 )
-
 
 # ================================
 # Handlers para Administrador (Admin)
 # ================================
 def register_handlers_admin(bot):
     """
-    Handlers destinados a la administración del sistema.
-    Solo el ADMIN_ID tiene acceso a estas funciones.
+    Registra los handlers de administración.
+    Solo pueden acceder aquellos cuyo ID esté en la lista de admins o sea el SUPER_ADMIN.
     """
     @bot.callback_query_handler(func=lambda call: call.data == "admin_panel")
     def admin_panel(call):
         data = load_database()
+        # Obtener los IDs de administradores
         user_admins = [u["user_id"] for u in data["usuarios"] if u.get('rol') == 'admin']
-        
-        if call.message.chat.id not in user_admins + [ADMIN_ID]:
+        if call.message.chat.id not in user_admins + [SUPER_ADMIN['user_id']]:
             bot.send_message(call.message.chat.id, "❌ No tienes permiso para acceder a la administración.")
             return
+
         # Menú de administración con botones
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
         btn_pending = types.KeyboardButton("📨 Solicitudes Pendientes")
         btn_all_users = types.KeyboardButton("👥 Ver Todos los Usuarios")
         btn_stats = types.KeyboardButton("📊 Estadísticas")
-        btn_promote_admin = types.KeyboardButton("⭐ Promover a Administrador")
+        btn_promote_admin = types.KeyboardButton("🔝 Promover a Admin")
         btn_delete_user = types.KeyboardButton("❌ Eliminar Usuario")
-        markup.add(btn_pending, btn_all_users, btn_stats, btn_delete_user, btn_promote_admin)
+        btn_demote_admin = types.KeyboardButton("🔻 Despromover Admin")
+        markup.add(btn_pending, btn_all_users, btn_stats, btn_delete_user, btn_promote_admin, btn_demote_admin)
         bot.send_message(call.message.chat.id,
             "🔧 <b>Panel de Administración</b>\nSelecciona una opción:",
             parse_mode="HTML",
             reply_markup=markup)
 
-    @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.text == "📨 Solicitudes Pendientes")
+    @bot.message_handler(func=lambda message: message.chat.id in check_is_admin() and message.text == "📨 Solicitudes Pendientes")
     def pending_requests(message):
-        """Lista las solicitudes pendientes de los usuarios y permite aceptarlas o rechazarlas."""
+        """Lista las solicitudes pendientes de los usuarios (solicitud 'pendiente' o 'rechazada')."""
         data = load_database()
         pending = [u for u in data["usuarios"] if u.get("solicitud") in ("pendiente", "rechazada")]
         if not pending:
             bot.send_message(message.chat.id, "No hay solicitudes pendientes.")
             return
         
-        # Mostrar usuarios con solicitudes pendientes enumerados
         response = "📨 <b>Solicitudes Pendientes:</b>\n"
-        for idx, u in enumerate(pending, start=1):
-            response += f"{idx}. @{u.get('username', 'Usuario')} (ID: {u.get('user_id')})\n"
-        response += "\nPor favor, envía el número del usuario que deseas aceptar/rechazar o un rango de números separados por un guion (ejemplo: 1-3). Asegúrate de que los números sean válidos y correspondan a los usuarios listados:"
+        for u in pending:
+            response += f"• @{u.get('username', 'Usuario')} (ID: {u.get('user_id')})\n"
+        response += ("\nEnvía los IDs de los usuarios y su decisión (A para aceptar, D para rechazar) separados por comas.\n"
+                     "Ejemplo: '12345 A,67890 D'\n"
+                     "Escribe 0 para cancelar.")
         bot.send_message(message.chat.id, response, parse_mode="HTML")
-        
         bot.register_next_step_handler(message, lambda msg: validate_and_process_input(msg, "solicitude"))
 
-    @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.text == "👥 Ver Todos los Usuarios")
+    @bot.message_handler(func=lambda message: message.chat.id in check_is_admin() and message.text == "👥 Ver Todos los Usuarios")
     def all_users(message):
-        """Muestra la lista de todos los usuarios registrados."""
+        """Muestra la lista de todos los usuarios registrados, junto con su rol y plan."""
         data = load_database()
         if not data["usuarios"]:
             bot.send_message(message.chat.id, "No hay usuarios registrados.")
             return
         response = "👥 <b>Usuarios Registrados:</b>\n"
         for u in data["usuarios"]:
-            response += f"• @{u.get('username', 'Usuario')} - Plan: {u.get('plan', 'Desconocido')}\n"
+            response += f"• @{u.get('username', 'Usuario')} - Plan: {u.get('plan', 'Desconocido')} - Rol: {u.get('rol', 'N/A')}\n"
         bot.send_message(message.chat.id, response, parse_mode="HTML")
 
-    @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.text == "📊 Estadísticas")
+    @bot.message_handler(func=lambda message: message.chat.id in check_is_admin() and message.text == "📊 Estadísticas")
     def statistics(message):
-        """Muestra estadísticas básicas del sistema."""
+        """Muestra estadísticas del sistema, incluyendo roles de usuarios."""
         data = load_database()
         total_users = len(data["usuarios"])
         premium_users = len([u for u in data["usuarios"] if u.get("plan") == "premium"])
         basic_users = total_users - premium_users
+        admin_users = len([u for u in data["usuarios"] if u.get("rol") == "admin"])
         response = (
             "📊 <b>Estadísticas:</b>\n"
             f"• Total de usuarios: {total_users}\n"
             f"• Usuarios Premium: {premium_users}\n"
             f"• Usuarios Básicos: {basic_users}\n"
+            f"• Administradores: {admin_users}\n"
         )
         bot.send_message(message.chat.id, response, parse_mode="HTML")
     
-    @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.text == "⭐ Promover a Administrador")
+    @bot.message_handler(func=lambda message: message.chat.id in check_is_admin() and message.text == "🔝 Promover a Admin")
     def promote_to_admin(message):
-        """Promueve uno o varios usuarios a administrador."""
+        """Promueve uno o varios usuarios a administrador utilizando sus IDs."""
         data = load_database()
         if not data["usuarios"]:
             bot.send_message(message.chat.id, "No hay usuarios registrados.")
             return
         
-        # Mostrar usuarios enumerados
+        # Mostrar lista de usuarios (excluyendo al administrador que envía el comando)
         response = "👥 <b>Usuarios Registrados:</b>\n"
-        for idx, u in enumerate(data["usuarios"], start=1):
-            response += f"{idx}. @{u.get('username', 'Usuario')} (ID: {u.get('user_id')})\n"
-        response += "\nPor favor, envía el número del usuario que deseas promover a administrador o un rango de números separados por un guion (ejemplo: 1-3). Asegúrate de que los números sean válidos y correspondan a los usuarios listados:"
+        for u in data["usuarios"]:
+            if u.get("user_id") != message.chat.id:
+                response += f"• @{u.get('username', 'Usuario')} (ID: {u.get('user_id')})\n"
+        response += ("\nEnvía los IDs de los usuarios que deseas promover, separados por comas.\n"
+                     "Ejemplo: '12345,67890'\n"
+                     "Escribe 0 para cancelar.")
         bot.send_message(message.chat.id, response, parse_mode="HTML")
-        
         bot.register_next_step_handler(message, lambda msg: validate_and_process_input(msg, "promote"))
 
-    @bot.message_handler(func=lambda message: message.chat.id == ADMIN_ID and message.text == "❌ Eliminar Usuario")
+    @bot.message_handler(func=lambda message: message.chat.id in check_is_admin() and message.text == "❌ Eliminar Usuario")
     def delete_user(message):
-        """Elimina uno o varios usuarios del sistema."""
+        """Elimina uno o varios usuarios del sistema utilizando sus IDs."""
         data = load_database()
         if not data["usuarios"]:
             bot.send_message(message.chat.id, "No hay usuarios registrados.")
             return
         
-        # Mostrar usuarios enumerados
         response = "👥 <b>Usuarios Registrados:</b>\n"
-        for idx, u in enumerate(data["usuarios"], start=1):
-            response += f"{idx}. @{u.get('username', 'Usuario')} (ID: {u.get('user_id')})\n"
-        response += "\nPor favor, envía el número del usuario que deseas eliminar o un rango de números separados por un guion (ejemplo: 1-3). Asegúrate de que los números sean válidos y correspondan a los usuarios listados:"
+        for u in data["usuarios"]:
+            if u.get("user_id") != message.chat.id:
+                response += f"• @{u.get('username', 'Usuario')} (ID: {u.get('user_id')})\n"
+        response += ("\nEnvía los IDs de los usuarios que deseas eliminar, separados por comas.\n"
+                     "Ejemplo: '12345,67890'\n"
+                     "Escribe 0 para cancelar.")
         bot.send_message(message.chat.id, response, parse_mode="HTML")
-        
         bot.register_next_step_handler(message, lambda msg: validate_and_process_input(msg, "delete"))
 
-    @bot.callback_query_handler(func=lambda call: call.data.startswith("notificar_pago_"))
-    def notify_admins(call):
-        """
-        Notifica a los administradores sobre un pago realizado por un usuario.
-        """
-        user_id = int(call.data.split("_")[-1])
+    @bot.message_handler(func=lambda message: message.chat.id == SUPER_ADMIN.get("user_id") and message.text == "🔻 Despromover Admin")
+    def demote_admin(message):
+        """Despromueve uno o varios administradores (excepto el superadmin) utilizando sus IDs."""
         data = load_database()
-        user = next((u for u in data["usuarios"] if u["user_id"] == user_id), None)
-
-        if not user:
-            bot.send_message(call.message.chat.id, "❌ Usuario no encontrado.")
+        response = "👥 <b>Administradores Actuales:</b>\n"
+        admins = [u for u in data["usuarios"] if u.get("rol") == "admin" and u.get("user_id") != SUPER_ADMIN.get("user_id")]
+        if not admins:
+            bot.send_message(message.chat.id, "No hay administradores para despromover.")
             return
+        for u in admins:
+            response += f"• @{u.get('username', 'Usuario')} (ID: {u.get('user_id')})\n"
+        response += ("\nEnvía los IDs de los administradores que deseas despromover, separados por comas.\n"
+                     "Ejemplo: '12345,67890'\n"
+                     "Escribe 0 para cancelar.")
+        bot.send_message(message.chat.id, response, parse_mode="HTML")
+        bot.register_next_step_handler(message, lambda msg: validate_and_process_input(msg, "demote"))
 
-        # IDs de administradores: ADMIN_ID y usuarios con rol 'admin'
-        admin_ids = [ADMIN_ID] + [u["user_id"] for u in data["usuarios"] if u.get("rol") == "admin"]
-
-        for admin_id in admin_ids:
-            bot.send_message(
-                admin_id,
-                f"📨 <b>Notificación de Pago</b>\n"
-                f"El usuario @{user.get('username', 'Usuario')} (ID: {user['user_id']}) "
-                "ha notificado un pago. Por favor, verifica y procesa la solicitud.",
-                parse_mode="HTML"
-            )
-
-        bot.send_message(call.message.chat.id, "✅ Notificación enviada a los administradores.")
-    
     # ================================
     # Función para validar y procesar la entrada del usuario
     # ================================
     def validate_and_process_input(msg, action):
         """
         Valida la entrada del usuario y procesa la acción correspondiente.
-
+        Permite ingresar múltiples IDs separados por comas.
+        
         Parámetros:
-        - msg: Objeto mensaje de Telegram.
-        - action: Acción a procesar ("solicitude", "promote" o "delete").
+          - msg: Objeto mensaje de Telegram.
+          - action: Acción a procesar ("solicitude", "promote", "delete" o "demote").
         """
         data = load_database()
-        # IDs de administradores: ADMIN_ID y usuarios con rol 'admin'
-        handler_ids = [ADMIN_ID] + [u["user_id"] for u in data["usuarios"] if u.get("rol") == "admin"]
+        # Obtener los IDs de administradores para evitar que se procese alguno
+        handler_ids = get_admins()
 
         try:
             input_text = msg.text.strip()
-            ids_to_process = []
-
-            if action == "solicitude":
-                # Se espera un formato: "1 A" o "1-5 D"
-                parts = input_text.split()
-                if len(parts) != 2 or parts[1] not in ["A", "D"]:
-                    bot.send_message(msg.chat.id, "❌ Formato inválido. Usa el formato '1 A' o '1-5 D'.")
-                    bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-                    return
-
-                range_part, decision = parts[0], parts[1]
-                # Procesar rango de índices, por ejemplo "1-5"
-                if "-" in range_part:
-                    try:
-                        start, end = map(int, range_part.split("-"))
-                    except ValueError:
-                        bot.send_message(msg.chat.id, "❌ Rango inválido. Asegúrate de usar números.")
-                        bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-                        return
-                    if start > end or start < 1:
-                        raise ValueError("Rango inválido.")
-                    total_users = len(data["usuarios"])
-                    if end > total_users:
-                        bot.send_message(msg.chat.id, f"❌ El rango especificado excede el número de usuarios registrados ({total_users}).")
-                        bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-                        return
-                    ids_to_process = [
-                        {"user_id": data["usuarios"][i - 1]["user_id"], "decision": decision}
-                        for i in range(start, end + 1)
-                        if data["usuarios"][i - 1].get("solicitud") == "pendiente"
-                    ]
-                
-                else:
-                    try:
-                        idx = int(range_part) - 1
-                    except ValueError:
-                        bot.send_message(msg.chat.id, "❌ Índice inválido. Debe ser un número.")
-                        bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-                        return
-                    if idx < 0 or idx >= len(data["usuarios"]):
-                        raise ValueError("Índice fuera de rango.")
-                    user = data["usuarios"][idx]
-                    ids_to_process = [{"user_id": user["user_id"], "decision": decision}]
-
-                if not ids_to_process:
-                    bot.send_message(msg.chat.id, "❌ No se encontraron solicitudes válidas para procesar.")
-                    bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-                    return
-
-            elif action in ["promote", "delete"]:
-                # Se espera formato simple: "1" o "1-5"
-                if "-" in input_text:
-                    try:
-                        start, end = map(int, input_text.split("-"))
-                    except ValueError:
-                        bot.send_message(msg.chat.id, "❌ Formato inválido. Usa un rango válido como '1-3'.")
-                        bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-                        return
-                    if start > end or start < 1:
-                        raise ValueError("Rango inválido.")
-                    ids_to_process = [data["usuarios"][i - 1] for i in range(start, end + 1) if i - 1 < len(data["usuarios"])]
-                else:
-                    try:
-                        idx = int(input_text) - 1
-                    except ValueError:
-                        bot.send_message(msg.chat.id, "❌ Índice inválido. Debe ser un número.")
-                        bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-                        return
-                    if idx < 0 or idx >= len(data["usuarios"]):
-                        raise ValueError("Índice fuera de rango.")
-                    ids_to_process = [data["usuarios"][idx]]
-
-            # Evitar procesar a administradores
-            if any(user["user_id"] in handler_ids for user in ids_to_process):
-                bot.send_message(msg.chat.id, "❌ No puedes realizar esta acción en usuarios administradores.")
+            # Si se ingresa "0", se cancela la acción
+            if input_text == "0":
+                bot.send_message(msg.chat.id, "❌ Has cancelado la acción.")
                 return
 
-            # Llamar a la función que procesa la acción final con los usuarios seleccionados
-            process_user_input(msg, action, ids_to_process)
+            ids_to_process = []
+            if action == "solicitude":
+                # Espera formato: "userID decision" separados por comas, ejemplo: "12345 A,67890 D"
+                solicitudes = parse_solicitude_list(input_text)
+                if not solicitudes:
+                    bot.send_message(msg.chat.id, "❌ Formato inválido. Usa el formato '12345 A,67890 D'.")
+                    bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
+                    return
+                ids_to_process = solicitudes
+            elif action in ["promote", "delete", "demote"]:
+                # Espera una lista de IDs separados por comas, ejemplo: "12345,67890"
+                id_list = parse_id_list(input_text)
+                if not id_list:
+                    bot.send_message(msg.chat.id, "❌ Formato inválido. Asegúrate de ingresar números separados por comas.")
+                    bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
+                    return
+                # Convertir cada ID en el formato esperado (para promote, delete o demote)
+                ids_to_process = id_list
 
+            # Verificar que no se procese ningún usuario administrador (excepto en demote, que solo debe aplicarse a admins)
+            if action in ["promote", "delete"]:
+                if any(user_id in handler_ids for user_id in ids_to_process):
+                    bot.send_message(msg.chat.id, "❌ No puedes realizar esta acción en usuarios administradores.")
+                    return
+
+            # Llamar a la función que procesa la acción final
+            process_user_input(msg, action, ids_to_process)
         except Exception as e:
             print("Error:", e)
             bot.send_message(msg.chat.id, "❌ Ocurrió un error. Por favor, intenta nuevamente.")
             bot.register_next_step_handler(msg, lambda m: validate_and_process_input(m, action))
-
 
     # ================================
     # Función para procesar entradas del usuario según la acción
     # ================================
     def process_user_input(msg, action, users_to_process):
         """
-        Procesa la acción solicitada en los usuarios seleccionados.
-
+        Procesa la acción solicitada en base a los IDs proporcionados.
+        
         Parámetros:
-        - msg: Objeto mensaje de Telegram.
-        - action: Acción a procesar ("promote", "delete" o "solicitude").
-        - users_to_process: Lista de usuarios o diccionarios con 'user_id' y, en el caso de "solicitude", 'decision'.
+          - msg: Objeto mensaje de Telegram.
+          - action: Acción a procesar ("promote", "delete", "solicitude" o "demote").
+          - users_to_process: Lista de IDs (para promote, delete o demote) o lista de diccionarios (para solicitude).
         """
         data = load_database()
         try:
@@ -265,43 +217,66 @@ def register_handlers_admin(bot):
                 return
 
             if action == "promote":
-                # Promociona usuarios a rol "admin"
-                for user in users_to_process:
-                    user["rol"] = "admin"
-                    update_user(user["user_id"], {"rol": user["rol"]})
-                    bot.send_message(user["user_id"], f"✅ Haz sido promovido a administrador.")
-                    bot.send_message(msg.chat.id, f"✅ Se le ha notificado al usuario @{user["username"]} que ha sido promovido a administrador.")
-            elif action == "delete":
-                # Elimina usuarios de la base de datos
-                for user in users_to_process:
-                    data["usuarios"].remove(user)
-                save_database(data)
-                bot.send_message(msg.chat.id, "✅ Usuario(s) eliminado(s) correctamente.")
-            elif action == "solicitude":
-                # Procesa solicitudes: 'A' para aceptar y 'D' para rechazar
-                for user_data in users_to_process:
-                    user_id, decision = user_data["user_id"], user_data["decision"]
-                    user = next((u for u in data["usuarios"] if u["user_id"] == user_id), None)
+                # Promover a admin: procesar cada ID
+                for user_id in users_to_process:
+                    user = get_user_id(user_id)
                     if user:
-                        user["solicitud"] = "aceptada" if decision == "A" else "rechazada"
+                        update_user(user_id, {"rol": "admin"})
+                        bot.send_message(user_id, "✅ Haz sido promovido a administrador.")
+                        bot.send_message(msg.chat.id, f"✅ Usuario @{user.get('username')} promovido a administrador.")
+                    else:
+                        bot.send_message(msg.chat.id, f"❌ Usuario con ID {user_id} no encontrado.")
+            elif action == "delete":
+                # Eliminar usuarios
+                removed_users = []
+                for user_id in users_to_process:
+                    user = get_user_id(user_id)
+                    if user:
+                        data["usuarios"].remove(user)
+                        removed_users.append(user.get("username", str(user_id)))
+                    else:
+                        bot.send_message(msg.chat.id, f"❌ Usuario con ID {user_id} no encontrado.")
+                save_database(data)
+                if removed_users:
+                    bot.send_message(msg.chat.id, f"✅ Usuario(s) {', '.join(removed_users)} eliminado(s) correctamente.")
+            elif action == "demote":
+                # Despromover usuarios administradores (excepto el superadmin)
+                for user_id in users_to_process:
+                    # Evitar despromover al superadmin
+                    if user_id == SUPER_ADMIN.get("user_id"):
+                        bot.send_message(msg.chat.id, "❌ No puedes despromover al superadmin.")
+                        continue
+                    user = get_user_id(user_id)
+                    if user and user.get("rol") == "admin":
+                        update_user(user_id, {"rol": "usuario"})
+                        bot.send_message(user_id, "⚠️ Has sido despromovido y ya no eres administrador.")
+                        bot.send_message(msg.chat.id, f"✅ Usuario @{user.get('username')} despromovido correctamente.")
+                    else:
+                        bot.send_message(msg.chat.id, f"❌ Usuario con ID {user_id} no es administrador o no se encontró.")
+            elif action == "solicitude":
+                # Procesar solicitudes: se reciben diccionarios con user_id y decision
+                for item in users_to_process:
+                    user_id, decision = item["user_id"], item["decision"]
+                    user = get_user_id(user_id)
+                    if user:
                         if decision == "A":
-                            # Asegúrate de definir o importar la función handle_pago
-                            user = upgrade_user_to_premium(user["user_id"])
-                            bot.send_message(user["user_id"],
+                            # Actualiza al plan premium
+                            user = upgrade_user_to_premium(user_id)
+                            bot.send_message(user_id,
                                 f"🎉 <b>¡Felicidades!</b>\n\n"
-                                f"✅ Tu pago ha sido confirmado y tu cuenta ha sido actualizada a Plan Premium.\n"
+                                f"✅ Tu pago ha sido confirmado y tu cuenta ha sido actualizada a Plan Premium.\n\n"
+                                f"👤 <b>Usuario:</b> <code>{user['username']}</code>\n"
                                 f"🔑 <b>Clave:</b> <code>{user['password']}</code>\n"
                                 f"📅 <b>Inicio:</b> {user['fecha_inicio']}\n"
                                 f"⏳ <b>Vencimiento:</b> {user['fecha_fin']}\n\n"
                                 "¡Disfruta de todos los beneficios!",
-                                parse_mode="HTML"
-                                )
-        
-                            update_user(user["user_id"], {"solicitud": user["solicitud"], "plan": "premium", "pago" : True})
+                                parse_mode="HTML")
                         else:
-                            bot.send_message(user["user_id"],
-                                            "❌ Pago no confirmado. Realiza la transferencia y vuelve a intentarlo.")
-                            update_user(user["user_id"], {"solicitud":"rechazada"})
+                            bot.send_message(user_id,
+                                "❌ Tu solicitud ha sido rechazada. Realiza la transferencia y vuelve a intentarlo.")
+                        update_user(user_id, {"solicitud": "aceptada" if decision == "A" else "rechazada"})
+                    else:
+                        bot.send_message(msg.chat.id, f"❌ Usuario con ID {user_id} no encontrado.")
                 bot.send_message(msg.chat.id, "✅ Solicitud(es) procesada(s) correctamente.")
         except Exception as e:
             print("Error en process_user_input:", e)

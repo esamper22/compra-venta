@@ -1,7 +1,6 @@
 from telebot import types
-from bot.config import ADMIN_ID
-from bot.database import (
-    load_database, update_user,
+from controller.queries import (
+    check_is_admin, load_database, update_user,
     create_first_user, get_user_id
 )
 
@@ -21,7 +20,7 @@ def register_handlers_user(bot):
         created = create_first_user(message.chat.id, username)
         # Definir el menú principal con botones de teclado
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn_plan = types.KeyboardButton("Solicitar Plan 💰")
+        btn_plan = types.KeyboardButton("Mostrar Plan 💰")
         btn_help = types.KeyboardButton("Ayuda ℹ️")
         btn_webapp = types.KeyboardButton("Acceder a la MiniApp 🌐")
         btn_group = types.KeyboardButton("Unirse al Grupo 📢")
@@ -51,8 +50,8 @@ def register_handlers_user(bot):
         else: 
             bot.send_message(message.chat.id, again_msg, reply_markup=markup)
         
-    @bot.message_handler(func=lambda message: message.text == "Solicitar Plan 💰")
-    def solicitar_plan(message):
+    @bot.message_handler(func=lambda message: message.text == "Mostrar Plan 💰")
+    def mostrar_planes(message):
         """Permite al usuario solicitar un plan, enviando botones inline para confirmar el pago."""
         user = get_user_id(message.chat.id)
 
@@ -60,25 +59,61 @@ def register_handlers_user(bot):
             bot.send_message(message.chat.id, "❌ Usuario no encontrado. Por favor, usa /start para registrarte.")
             return
 
+        # Mostrar plan basico y premium al usuario que tienen estos planes
+        bot.send_message(message.chat.id, "Aqui estan los planes disponibles para ti:")
+        bot.send_message(message.chat.id,
+            "💰 <b>Plan Actual:</b>\n\n"
+            "🔹 Acceso a herramientas básicas.\n"
+            "🔹 Gestión de publicaciones.\n"
+            "🔹 Soporte técnico.\n"
+            "🔹 Estadísticas básicas.\n"
+            "🔹 Gestión de publicaciones.\n\n"
+            "✨ Mejora tu experiencia con el Plan Premium.",
+            parse_mode="HTML")
+        
+        bot.send_message(message.chat.id,
+            "💰 <b>Plan Premium:</b>\n\n"
+            "🔹 Acceso a herramientas avanzadas.\n"
+            "🔹 Gestión de publicaciones optimizada.\n"
+            "🔹 Soporte prioritario.\n"
+            "🔹 Estadísticas detalladas.\n"
+            "🔹 Herramientas de automatización.\n"
+            "🔹 Análisis de mercado.\n"
+            "🔹 Acceso a la MiniApp.\n\n"
+            "✨ ¡Disfruta de tu cuenta Premium!",
+            parse_mode="HTML")
+        
+        # Boton inline para solicitar el plan premium
+        markup = types.InlineKeyboardMarkup()
+        btn_solicitar = types.InlineKeyboardButton("Solicitar Plan Premium 💰", callback_data="solicitar_plan_premium")
+        markup.add(btn_solicitar)
+        bot.send_message(message.chat.id,
+            "✨ Si deseas mejorar tu cuenta, haz clic en el botón de abajo para solicitar el Plan Premium.",
+            reply_markup=markup)
+        
+    @bot.callback_query_handler(func=lambda call: call.data == "solicitar_plan_premium")
+    def solicitar_plan_premium_callback(call):
+        user = get_user_id(call.message.chat.id)
+        # Botones inline para confirmar el pago
         # Verificar el estado actual de la solicitud
         solicitud = user.get("solicitud")
         if solicitud == "pendiente":
-            bot.send_message(message.chat.id,
+            bot.send_message(call.message.chat.id,
                 "📨 Tu solicitud ya ha sido enviada y está en proceso de revisión. "
                 "Por favor, espera a que sea confirmada. Si tienes dudas, contacta a soporte: @samperfree (SuperAdmin).")
             return
         elif solicitud == "rechazada":
-            bot.send_message(message.chat.id,
+            bot.send_message(call.message.chat.id,
                 "❌ Tu solicitud ha sido rechazada. Realiza el pago para continuar con el proceso.")
             return
         elif solicitud == "aceptada":
-            bot.send_message(message.chat.id,
+            bot.send_message(call.message.chat.id,
                 "✨ Tu solicitud ya ha sido procesada. Revisa tu estado actual o contacta a soporte si tienes dudas.")
             return
 
 
         if not user.get("notificado", False):
-            bot.send_message(message.chat.id,
+            bot.send_message(call.message.chat.id,
                 "📨 Tu solicitud ya ha sido enviada y está en proceso de revisión. "
                 "Realiza el pago y espera a que sea confirmado.\n\n"
                 "💳 <b>Información de Pago:</b>\n"
@@ -87,8 +122,8 @@ def register_handlers_user(bot):
                 "🔍 <b>Estado de tu solicitud:</b> Puedes verificar el estado de tu solicitud en la opción 'Estado de cuenta 📊' del menú principal.\n\n"
                 "✨ Si tienes dudas, contacta a soporte: @samperfree (SuperAdmin).",
                 parse_mode="HTML")
-            update_user(message.chat.id, {"notificado": True, "solicitud": "pendiente", "pago": False})
-           
+            update_user(call.message.chat.id, {"notificado": True, "solicitud": "pendiente", "pago": False})
+        
     @bot.message_handler(func=lambda message: message.text == "Ayuda ℹ️")
     def help_command(message):
         """Muestra la lista de comandos disponibles."""
@@ -134,11 +169,13 @@ def register_handlers_user(bot):
         markup = types.InlineKeyboardMarkup()
         btn_access = types.InlineKeyboardButton("🌐 Acceder a la MiniApp", web_app=types.WebAppInfo(url="https://esamper.pythonanywhere.com/"))
         markup.add(btn_access)
-        bot.send_message(message.chat.id,
-            "🌐 <b>Acceso a la MiniApp:</b>\n\n"
+        bot.send_photo(message.chat.id,
+            photo = 'https://i.ibb.co/Ngc3XWTF/miniapp-preview.png',
+            caption = ("🌐 <b>Acceso a la MiniApp:</b>\n\n"
             "Gestiona tus publicaciones y accede a herramientas exclusivas para impulsar tus ventas.\n\n"
             "✨ Haz clic en el botón de abajo para comenzar.\n\n"
-            "Si necesitas ayuda, contacta a soporte.",
+            "Si necesitas ayuda, contacta a soporte."),
+            # Agregar foto local para mostrar vista previa de mini app
             parse_mode="HTML",
             reply_markup=markup)
 
@@ -146,10 +183,10 @@ def register_handlers_user(bot):
     def unirse_grupo(message):
         """Envía un botón inline para unirse al grupo."""
         markup = types.InlineKeyboardMarkup()
-        btn_join = types.InlineKeyboardButton("📢 Unirse al Grupo", url="https://t.me/examplegroup")
+        btn_join = types.InlineKeyboardButton("📢 Unirse al Grupo", url = "https://t.me/compraventasisla")
         markup.add(btn_join)
         bot.send_photo(message.chat.id,
-            photo="https://cdn.pixabay.com/photo/2025/02/17/16/04/dog-9413394_960_720.jpg",
+            photo = 'https://cdn1.cdn-telegram.org/file/kf0i338jVVfUK3V8tgQ4rhpNzcCT5Fa4tzvLYdYIsp1-2VUMk4ioOYInmCOf_jeZvzniUJnfZtCcXs2ysk5T620lWhafpagPjMXsAdg3WtUwo6dv0egpeRdz7N-DFlpbJbEWIGNXGmcI1yC1hSHFR7qBlg2VQt9wDSfsnqFJE8WzWOnvl98b94yyWSGQqJSB1J3QwnzsjB0ag5kG2QJbcLpD50uN1nYKEQPz4hmDuyS7q_QzHzqhGBdtbzqderTSfUVHtv025bZScXiIiBKgK2l449B7UysRBoIPS_XE8eRRxIgqISgCHtYjj7b-KuH6gsSh4MKlKi8vET3FlpxjDg.jpg',
             caption=("📢 <b>Únete a nuestro grupo:</b>\n\n"
                      "Conéctate con otros usuarios y mantente informado sobre novedades y promociones.\n\n"
                      "✨ Haz clic en el botón para unirte ahora.\n\n"
@@ -172,6 +209,8 @@ def register_handlers_user(bot):
         if user.get("plan") == "premium":
             bot.send_message(message.chat.id,
                 f"🌟 <b>¡Bienvenido a tu cuenta Premium!</b> 🌟\n\n"
+                f"👤 <b>Tu cuenta Premium para acceso a la MiniApp:</b>\n\n"
+                f"🔹 <b>Usuario:</b> {user['username']}\n"
                 f"🔑 <b>Clave:</b> <code>{user['password']}</code>\n"
                 f"📅 <b>Inicio:</b> {user['fecha_inicio']}\n"
                 f"⏳ <b>Vencimiento:</b> {user['fecha_fin']}\n"
@@ -215,7 +254,8 @@ def register_handlers_user(bot):
     # Función para procesar si el usuario es administrador
     # ================================
     def is_admin(message):
-        if message.chat.id == ADMIN_ID:
+        print(check_is_admin())
+        if message.chat.id in check_is_admin():
             # Agregar botón inline para ejecutar el comando /admin
             markup = types.InlineKeyboardMarkup()
             btn_admin = types.InlineKeyboardButton("Panel Administrativo", callback_data="admin_panel")
